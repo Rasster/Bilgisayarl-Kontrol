@@ -1,0 +1,70 @@
+
+#include "DHT.h"
+
+#define DHTPIN 10    // DHT sensörüne bağlı dijital pin
+#define RELAY1_PIN 2// Röle 1'in bağlı olduğu pin
+#define RELAY2_PIN 3 // Röle 2'nin bağlı olduğu pin
+
+#define DHTTYPE DHT11   // DHT 11
+
+
+DHT dht(DHTPIN, DHTTYPE);
+
+void setup() {
+  Serial.begin(9600);
+  
+
+  dht.begin();
+
+  // Röle pinlerini çıkış olarak ayarla
+  pinMode(RELAY1_PIN, OUTPUT);
+  pinMode(RELAY2_PIN, OUTPUT);
+}
+
+void loop() {
+  // Ölçümler arasında birkaç saniye bekleyin.
+  delay(2000);
+
+  // Sıcaklık veya nem okuma yaklaşık 250 milisaniye sürer!
+  // Sensör okumaları ayrıca 2 saniye kadar 'eskimiş' olabilir (çok yavaş bir sensör)
+  float h = dht.readHumidity();
+  // Sıcaklığı Celsius olarak oku (varsayılan)
+  float t = dht.readTemperature();
+  // Sıcaklığı Fahrenheit olarak oku (isFahrenheit = true)
+  float f = dht.readTemperature(true);
+
+  // Herhangi bir okumanın başarısız olup olmadığını kontrol edin ve erken çıkın (yeniden denemek için).
+  if (isnan(h) || isnan(t) || isnan(f)) {
+    Serial.println(F("DHT sensöründen okuma başarısız!"));
+    return;
+  }
+
+  // Sıcaklık endeksini Fahrenheit cinsinden hesaplayın (varsayılan)
+  float hif = dht.computeHeatIndex(f, h);
+  // Sıcaklık endeksini Celsius cinsinden hesaplayın (isFahreheit = false)
+  float hic = dht.computeHeatIndex(t, h, false);
+
+  Serial.print(F("Nem: "));
+  Serial.print(h);
+  Serial.print(F("%  Sıcaklık: "));
+  Serial.print(t);
+  Serial.print(F("°C "));
+  Serial.print(f);
+  Serial.print(F("°F  Isı endeksi: "));
+  Serial.print(hic);
+  Serial.print(F("°C "));
+  Serial.print(hif);
+  Serial.println(F("°F"));
+
+   if (t <= 31.50) {
+    digitalWrite(RELAY1_PIN, LOW);
+    digitalWrite(RELAY2_PIN, HIGH);
+  }
+  // Sıcaklık 32.00°C veya daha büyükse röle 1'i aç, röle 2'yi kapat
+  else if (t >= 32.00) {
+    digitalWrite(RELAY1_PIN, HIGH);
+    digitalWrite(RELAY2_PIN, LOW);
+  } 
+  // Diğer durumda her iki röleyi de kapat
+  
+}
